@@ -1,7 +1,13 @@
 package login
 
 import (
+	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/mmzou/geektime-dl/requester"
+	"net/http/cookiejar"
+	"net/url"
+	"regexp"
+	"strings"
 )
 
 //Client login client
@@ -44,5 +50,77 @@ func NewLoginClient() *Client {
 //InitLoginPage init
 func (c *Client) InitLoginPage() {
 	res, _ := c.Get("https://account.geekbang.org/signin?redirect=https%3A%2F%2Ftime.geekbang.org%2F")
+	fmt.Println(res)
 	defer res.Body.Close()
+}
+
+//Login by phone and dpassword
+func (c *Client) Login(phone, password string) *Result {
+	result := &Result{}
+	post := map[string]string{
+		"country":   "86",
+		"cellphone": phone,
+		"password":  password,
+		"captcha":   "",
+		"remeber":   "1",
+		"platform":  "3",
+		"appid":     "1",
+	}
+
+	header := map[string]string{
+		"Referer":    "https://account.geekbang.org/signin?redirect=https%3A%2F%2Ftime.geekbang.org%2F",
+		"Accept":     "application/json",
+		"Connection": "keep-alive",
+	}
+	body, err := c.Fetch("POST", "https://account.geekbang.org/account/ticket/login", post, header)
+	if err != nil {
+		result.Code = -1
+		result.Error.Code = -1
+		result.Error.Msg = "网络请求失败, " + err.Error()
+
+		return result
+	}
+
+	rex, _ := regexp.Compile("\\[\\]")
+	body = rex.ReplaceAll(body, []byte("{}"))
+
+	if err = jsoniter.Unmarshal(body, &result); err != nil {
+		result.Code = -1
+		result.Error.Code = -1
+		result.Error.Msg = "发送登录请求错误: " + err.Error()
+
+		return result
+	}
+
+	if result.IsLoginSuccess() {
+		fmt.Println(result)
+		result.parseCookies("https://account.geekbang.org", c.Jar.(*cookiejar.Jar))
+	}
+
+	return result
+}
+
+//parseCookies 解析cookie
+func (r *Result) parseCookies(targetURL string, jar *cookiejar.Jar) {
+	url, _ := url.Parse(targetURL)
+	cookies := jar.Cookies(url)
+
+	cookieArr := []string{}
+	for _, cookie := range cookies {
+		switch cookie.Name {
+		case "GCID":
+			r.Data.GCID = cookie.Value
+		case "GCESS":
+			r.Data.GCESS = cookie.Value
+		case "SERVERID":
+			r.Data.ServerID = cookie.Value
+		}
+		cookieArr = append(cookieArr, cookie.String())
+	}
+	r.Data.CookieString = strings.Join(cookieArr, ";")
+}
+
+//IsLoginSuccess 是否登陆成功
+func (r *Result) IsLoginSuccess() bool {
+	return r.Code == 0
 }
