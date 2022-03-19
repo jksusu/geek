@@ -2,12 +2,13 @@ package login
 
 import (
 	"fmt"
-	jsoniter "github.com/json-iterator/go"
-	"github.com/mmzou/geektime-dl/requester"
 	"net/http/cookiejar"
 	"net/url"
 	"regexp"
 	"strings"
+
+	jsoniter "github.com/json-iterator/go"
+	"github.com/mmzou/geektime-dl/requester"
 )
 
 //Client login client
@@ -42,7 +43,10 @@ func NewLoginClient() *Client {
 	c := &Client{
 		HTTPClient: requester.NewHTTPClient(),
 	}
-	c.InitLoginPage()
+
+	fmt.Print(c)
+
+	//c.InitLoginPage()
 
 	return c
 }
@@ -50,7 +54,6 @@ func NewLoginClient() *Client {
 //InitLoginPage init
 func (c *Client) InitLoginPage() {
 	res, _ := c.Get("https://account.geekbang.org/signin?redirect=https%3A%2F%2Ftime.geekbang.org%2F")
-	fmt.Println(res)
 	defer res.Body.Close()
 }
 
@@ -80,10 +83,9 @@ func (c *Client) Login(phone, password string) *Result {
 
 		return result
 	}
-
 	rex, _ := regexp.Compile("\\[\\]")
 	body = rex.ReplaceAll(body, []byte("{}"))
-
+	//将字符串解码到结构体
 	if err = jsoniter.Unmarshal(body, &result); err != nil {
 		result.Code = -1
 		result.Error.Code = -1
@@ -91,9 +93,7 @@ func (c *Client) Login(phone, password string) *Result {
 
 		return result
 	}
-
 	if result.IsLoginSuccess() {
-		fmt.Println(result)
 		result.parseCookies("https://account.geekbang.org", c.Jar.(*cookiejar.Jar))
 	}
 

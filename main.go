@@ -1,14 +1,21 @@
 package main
 
 import (
-	"geek/login"
+	"geek/cmd"
 )
 
 func main() {
-	c := login.NewLoginClient()
 
-	result := c.Login("1", "1")
-	if !result.IsLoginSuccess() {
-		//return "", "", "", errors.New(result.Error.Msg)
-	}
+	cmd.Execute()
+	// c := login.NewLoginClient()
+
+	// fmt.Print(c)
+
+	// result := c.Login("1", "1")
+
+	// fmt.Print(result)
+
+	// if !result.IsLoginSuccess() {
+	// 	//return "", "", "", errors.New(result.Error.Msg)
+	// }
 }
